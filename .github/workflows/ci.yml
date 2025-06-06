@@ -5,33 +5,46 @@ on:
     branches:
       - main
   pull_request:
+    branches:
+      - main
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set up Python 3.9
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
       - name: Install dependencies
         run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
 
       - name: Run tests
-        run: pytest
+        # Важно: pytest вызывается из корня репозитория, чтобы модуль app.py был в sys.path
+        working-directory: ${{ github.workspace }}
+        run: |
+          source venv/bin/activate
+          pytest
 
   build:
     needs: test
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Build Docker image
-        run: docker build -t myapp:latest
+        # Без указания контекста (.) Docker выдаст ошибку "requires 1 argument"
+        run: docker build -t myapp:latest .
+
